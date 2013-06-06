@@ -69,6 +69,7 @@ class Brook:
         # Change to running all domains from list
         for name, domain in self.domdict.iteritems():
             if not domain['active'] and domain['chosen']:
+                print('Starting up %s' % name)
                 self.conn.lookupByName(name).create()
 
 
@@ -80,8 +81,10 @@ class Brook:
             if domain['active'] and domain['chosen']:
                 dom_object = self.conn.lookupByID(domain['id'])
                 if force:
+                    print('Forcing off %s' % name)
                     dom_object.destroy()
                 else:
+                    print('Shutting down %s' % name)
                     dom_object.shutdown()
 
     def testauth(self):
