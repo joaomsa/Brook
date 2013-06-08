@@ -4,12 +4,25 @@ import sys
 import re
 import subprocess
 
-# TODO:
-# Use funcion docstrings to generate help
-# Switch to using paramiko for SSH, instead of subprocess
-# Implement snapshot management
 
-class Brook:
+from libvirt import virDomainSnapshot
+from xml.etree import ElementTree
+class brookDomainSnapshot(virDomainSnapshot):
+    def __new__(cls, snapshot):
+        snapshot.__class__ = cls
+        return snapshot
+
+    def __init__(self, snapshot):
+        self.xml = ElementTree.fromstring(snapshot.getXMLDesc())
+        pass
+
+    def getDate(self):
+        return int(self.xml.find('creationTime').text)
+
+    def getState(self):
+        return self.xml.find('state').text
+
+class Brook(object):
     def __init__(self, uri):
         # Open connection and parse domain list
         self.conn = libvirt.open(uri)
@@ -122,11 +135,17 @@ class Brook:
                 print("%s\n%s" % (domain, output))
         return True
 
-    def snaplist(self):
+    def snaplist(self, *args, **kwargs):
         for domain in self.domdict:
             if self.domdict[domain]['chosen']:
                 dom = self.conn.lookupByName(domain)
-                print(dom.snapshotListNames(libvirt.VIR_DOMAIN_SNAPSHOT_LIST_DESCENDANTS))
+                print(domain)
+                print('-'*80)
+                print('Name\tCreation Time\tState')
+                print('-'*80)
+                for snap in dom.listAllSnapshots():
+                    snap = brookDomainSnapshot(snap)
+                    print("%s\t%s\t%s" % (snap.getName(), snap.getDate(), snap.getState()))
 
     def snapcreate(self, snapshot=None):
         # Try to create, snapshot
@@ -177,6 +196,9 @@ if __name__ == "__main__":
             help='Executes command over ssh.')
     parser_execute.add_argument('cmd',
             help='The command to execute remotely')
+
+    parser_snaplist = subparsers.add_parser('snaplist', parents=[select],
+            help='Print list of snapshots for selected domains')
 
     args = parser.parse_args()
 
