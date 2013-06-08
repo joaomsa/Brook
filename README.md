@@ -18,7 +18,7 @@ which would be equivalent to doing in virsh:
     virsh shutdown loadbal5
     virsh shutdown backup1
 
-Brook uses the qemu:///system hypervisor by default but you can specify any supported by libvirt using the -c flag:
+Brook uses the qemu:///system hypervisor by default but you can specify any supported by libvirt (So far it's only been really tested using local and remote qemu instances) using the -c flag:
 
     brook list -c qemu+ssh://kakiray@remotevmhost/system
 
@@ -31,6 +31,7 @@ TODO
 ----
 
 * Executing actions in parallel to speed up.
-* Implement support for creating, managing, and reverting snapshots through brook.
+* Implement support for creating, and reverting snapshots through brook.
+* Implement support for viewing snapshot tree similar to 'git log --graph'
 * Support executing ssh commands on machines whose hostnames differ from vm name
 * Support executing commands using serial connection to test situations of no connectivity.
