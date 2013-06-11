@@ -130,23 +130,35 @@ class Brook(object):
                     snap = brookDomainSnapshot(snap)
                     print("%s\t%s\t%s" % (snap.getName(), snap.getDate(), snap.getState()))
 
-    def snapcreate(self, snapshot=None):
+    def snapcreate(self, name=None, *args, **kwargs):
         # Try to create, snapshot
         # if no name then use default datestring.
-        return None
+        for domain in self.domdict:
+            dom = self.conn.lookupByName(domain)
+            # TODO: Implement XML creation in brookDomainSnapshot
+            #dom.snapshotCreateXML()
 
-    def snaprestore(self, snapshot=None):
+    def snaprestore(self, name=None, force=False, *args, **kwargs):
         # Restore all machines to state from 'snapshot'
         # (fail if any in list don't have that snapshot)
-        if not snapshot:
-            # Get current snapshot and try to restore it
-            return self.list()
-        elif isinstance(snapshot, basestring):
-            # find snapshot and try to restore it
-            for dom in self.domlist_active():
-                dom.snapshotLookupByName(snapshot)
-            return self.list()
-        sys.exit(1)
+        for domain in self.domdict:
+            if self.domdict[domain]['chosen']:
+                dom = self.conn.lookupByName(domain)
+                try:
+                    # Get current snapshot and try to restore it
+                    if not name:
+                        snap = dom.snapshotCurrent()
+                    else:
+                        snap = dom.snapshotLookupByName(name)
+                    snap = brookDomainSnapshot(snap)
+                    print("Restoring %s to snapshot '%s' from %i" %
+                            (domain, snap.getName(), snap.getDate()))
+                    flags = 0
+                    if force:
+                        flags |= libvirt.VIR_DOMAIN_SNAPSHOT_REVERT_FORCE
+                    dom.revertToSnapshot(snap, flags=flags)
+                except libvirt.libvirtError as e:
+                    print(e.message)
 
 if __name__ == "__main__":
     import argparse
@@ -182,6 +194,14 @@ if __name__ == "__main__":
 
     parser_snaplist = subparsers.add_parser('snaplist', parents=[select],
             help='Print list of snapshots for selected domains')
+
+    parser_snaprestore = subparsers.add_parser('snaprestore', parents=[select],
+            help='Revert domain back to a spanshot')
+    parser_snaprestore.add_argument('name', nargs='?',
+            help='Snapshot to revert to')
+    parser_snaprestore.add_argument('-f', '--force', action='store_true',
+            help='Allows risky reverts in case of metadata incompatibility')
+
 
     args = parser.parse_args()
 
