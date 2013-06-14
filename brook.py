@@ -2,7 +2,6 @@
 import libvirt
 import sys
 import re
-import subprocess
 from Brook.snapshot import brookDomainSnapshot
 
 class Brook(object):
@@ -105,18 +104,22 @@ class Brook(object):
     def execute(self, cmd, *args, **kwargs):
         # Execute command remotely, output the command output, and exit with
         # return code.
+        import shlex
+        from subprocess import Popen, PIPE, STDOUT
+        import subprocess
         for domain in self.domdict:
             if self.domdict[domain]['chosen']:
+                print('Deep shit')
                 if not self.domdict[domain]['active']:
                     sys.exit("%s is not running" % domain)
-                process = subprocess.Popen("ssh -o BatchMode=yes %s %s" % (domain, cmd),
-                        shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                output = process.communicate()
+
+                args = shlex.split("ssh -o BatchMode=yes %s '%s'" % (domain, cmd))
+                process = Popen(args, stdout=PIPE, stderr=STDOUT)
+                output, _ = process.communicate(None)
                 status = process.poll()
-                if status is not 0:
-                    sys.exit("%s: %s" % (domain, output))
-                print("%s\n%s" % (domain, output))
-        return True
+
+                print("Execution on domain %s returned %i" % (domain, status))
+                print(output)
 
     def snaplist(self, *args, **kwargs):
         for domain in self.domdict:
